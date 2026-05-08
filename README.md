@@ -37,11 +37,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ## History
 
-### 2026-05-08 - Modern Debian Compilation Updates
+### 2026-05-08 - CUPS 2.0+ Compatibility and Modern Debian Compilation Updates
 
-Updated the driver to compile cleanly on modern Debian systems and current GCC versions.
+Updated the driver to compile cleanly on modern Debian systems, current GCC versions, and modern CUPS libraries (CUPS 2.0+).
 
 **Changes made:**
+
+#### CUPS 2.0+ Compatibility
+The `ppd_file_t` type was deprecated in CUPS 1.6 and removed entirely in CUPS 2.0. This fix ensures the driver works with both old and modern CUPS versions:
+
+- **Function Signatures:** All function prototypes changed to use `void *ppd` instead of `ppd_file_t *ppd`
+- **Internal Casting:** Each function that needs to access PPD structure members now internally casts: `ppd_file_t *ppd = (ppd_file_t *)ppd_arg;`
+- **Backward Compatibility:** Maintains compatibility with CUPS 1.6+ while working with CUPS 2.0+
+- **Updated Functions:** `Setup()`, `StartPage()`, `EndPage()`, `OutputLine()`, `TOPIXCompress()`, and `TOPIXCompressOutputBuffer()`
+
+#### Earlier Updates (from 2026-05-08)
 - Added missing standard library headers: `#include <stdio.h>` and `#include <string.h>`
 - Replaced all unsafe `strcpy()` and `strcat()` calls with `strncpy()` and `strncat()` for buffer overflow protection
 - Fixed compiler warnings for signed/unsigned type mismatches with explicit casts
@@ -113,5 +123,5 @@ and show them in the CUPS printer selection screens.
 rastertotpcl is based on the rastertotec driver written by Patick Kong (SKE s.a.r.l).
 rastertotec is based on the rastertolabel driver included with the CUPS printing system by Easy Software Products.
 Packaging of rastertotpcl and TOPIX compression was added by Sam Lown (www.samlown.com).
-Modern Debian compilation updates added by codyintegralis (2026).
+Modern Debian compilation updates and CUPS 2.0+ compatibility added by codyintegralis (2026).
 
