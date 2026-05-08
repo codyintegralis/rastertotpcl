@@ -83,22 +83,23 @@ int		ModelNumber; 		/* cupsModelNumber attribute (not currently in use) */
 /*
  * Prototypes...
  */
-void Setup(ppd_file_t *ppd);
-void StartPage(ppd_file_t *ppd, cups_page_header2_t *header);
-void EndPage(ppd_file_t *ppd, cups_page_header2_t *header);
+void Setup(void *ppd);
+void StartPage(void *ppd, cups_page_header2_t *header);
+void EndPage(void *ppd, cups_page_header2_t *header);
 void CancelJob(int sig);
-void OutputLine(ppd_file_t *ppd, cups_page_header2_t *header, int y);
+void OutputLine(void *ppd, cups_page_header2_t *header, int y);
 
-void TOPIXCompress(ppd_file_t *ppd, cups_page_header2_t *header, int y);
-void TOPIXCompressOutputBuffer(ppd_file_t *ppd, cups_page_header2_t *header, int y);
+void TOPIXCompress(void *ppd, cups_page_header2_t *header, int y);
+void TOPIXCompressOutputBuffer(void *ppd, cups_page_header2_t *header, int y);
 
 /*
  * 'Setup()' - Prepare the printer for printing.
  */
-void Setup(ppd_file_t *ppd)			/* I - PPD file */
+void Setup(void *ppd_arg)			/* I - PPD file */
 {
   char		*Fadjm;			/* Fine adjust printing position */
   char		*Radj;			/* Ribbon adjust parameter */
+  ppd_file_t	*ppd = (ppd_file_t *)ppd_arg;
   ppd_choice_t	*choice;		/* Marked choice */
   /* initialize Fadjm */
   Fadjm = (char *) malloc(INTSIZE +2); /* Advanced parameters for printer */
@@ -192,9 +193,10 @@ void Setup(ppd_file_t *ppd)			/* I - PPD file */
  * 'StartPage()' - Start a page of graphics.
  */
 void
-StartPage(ppd_file_t         *ppd,	/* I - PPD file */
+StartPage(void *ppd_arg,         /* I - PPD file */
           cups_page_header2_t *header)	/* I - Page header */
 {
+  ppd_file_t	*ppd = (ppd_file_t *)ppd_arg;
   ppd_choice_t  *choice;		/* Marked choice */
   int           labelgap;		/* length of labelgap */
   int           labelpitch; /* label pitch, distance from start of one label to the next */
@@ -423,9 +425,10 @@ StartPage(ppd_file_t         *ppd,	/* I - PPD file */
  * 'EndPage()' - Finish a page of graphics.
  */
 void
-EndPage(ppd_file_t *ppd,		/* I - PPD file */
+EndPage(void *ppd_arg,		/* I - PPD file */
         cups_page_header2_t *header)	/* I - Page header */
 {
+  ppd_file_t	*ppd = (ppd_file_t *)ppd_arg;
   int 		      Quant;	 		/* Quantity to print */
   char		      *Temp;			/* Temporary string */
   unsigned int 	Tmedia;			/* type of media */
@@ -461,7 +464,7 @@ EndPage(ppd_file_t *ppd,		/* I - PPD file */
    * If not in TOPIX mode, we also need to close the raw graphics output.
    */
   if (Gmode == TEC_GMODE_TOPIX)
-    TOPIXCompressOutputBuffer(ppd, header, 0);
+    TOPIXCompressOutputBuffer(ppd_arg, header, 0);
   else
     printf("|}\n");
 
@@ -651,13 +654,13 @@ CancelJob(int sig)			/* I - Signal */
  * Empty lines can often be skipped if the buffer is checked.
  */
 void
-OutputLine(ppd_file_t           *ppd,	    /* I - PPD file */
+OutputLine(void *ppd_arg,           /* I - PPD file */
            cups_page_header2_t  *header,	/* I - Page header */
            int                  y)	      /* I - Line number */
 {
 
   if (Gmode == TEC_GMODE_TOPIX) {
-    TOPIXCompress(ppd, header, y);
+    TOPIXCompress(ppd_arg, header, y);
   } else {
     // Hex Output
     fwrite(Buffer, 1, header->cupsBytesPerLine, stdout);
@@ -671,7 +674,7 @@ OutputLine(ppd_file_t           *ppd,	    /* I - PPD file */
  * 'TOPIXCompress()' - Apply TOPIX compression mechanism to current data in buffers
  */
 void
-TOPIXCompress(ppd_file_t         *ppd,	    /* I - PPD file */
+TOPIXCompress(void *ppd_arg,         /* I - PPD file */
               cups_page_header2_t *header,	/* I - Page header */
               int                y)         /* Line number */
 {
@@ -695,7 +698,7 @@ TOPIXCompress(ppd_file_t         *ppd,	    /* I - PPD file */
    * This will create multiple graphics objects depending on the size of the image.
    */
   if ((CompBufferPtr - CompBuffer) > (0xFFFF - (width + (ceil(width / 8) * 3)))) {
-    TOPIXCompressOutputBuffer(ppd, header, y);
+    TOPIXCompressOutputBuffer(ppd_arg, header, y);
     memset(LastBuffer, 0, header->cupsBytesPerLine);
   }
 
@@ -761,7 +764,7 @@ TOPIXCompress(ppd_file_t         *ppd,	    /* I - PPD file */
  *
  * Set y to 0 if this is the last line.
  */
-void TOPIXCompressOutputBuffer(ppd_file_t          *ppd,	   /* PPD file */
+void TOPIXCompressOutputBuffer(void *ppd_arg,      /* PPD file */
                                cups_page_header2_t *header,	 /* Page header */
                                int                 y)        /* Line number */
 {
@@ -868,7 +871,7 @@ main(int  argc,				/* I - Number of command-line arguments */
   /*
    * Initialize the print device...
    */
-  Setup(ppd);
+  Setup((void *)ppd);
 
   /*
    * Process pages as needed...
@@ -887,7 +890,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     /*
      * Start the page...
      */
-    StartPage(ppd, &header);
+    StartPage((void *)ppd, &header);
 
     /*
      * Loop for each line on the page...
@@ -910,13 +913,13 @@ main(int  argc,				/* I - Number of command-line arguments */
       /*
        * Write it to the printer...
        */
-      OutputLine(ppd, &header, y);
+      OutputLine((void *)ppd, &header, y);
     }
 
     /*
      * Eject the page...
      */
-    EndPage(ppd, &header);
+    EndPage((void *)ppd, &header);
     if (Canceled)
       break;
   }
@@ -943,4 +946,3 @@ main(int  argc,				/* I - Number of command-line arguments */
     fputs("INFO: Ready to print.\n", stderr);
   return (Page == 0);
 }
-
