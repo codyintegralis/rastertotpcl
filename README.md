@@ -37,6 +37,23 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ## History
 
+### 2026-05-08 - Modern Debian Compilation Updates
+
+Updated the driver to compile cleanly on modern Debian systems and current GCC versions.
+
+**Changes made:**
+- Added missing standard library headers: `#include <stdio.h>` and `#include <string.h>`
+- Replaced all unsafe `strcpy()` and `strcat()` calls with `strncpy()` and `strncat()` for buffer overflow protection
+- Fixed compiler warnings for signed/unsigned type mismatches with explicit casts
+- Improved memory management with proper `free()` calls in Setup/EndPage functions
+- Fixed ceiling calculation with proper float division before casting to int
+- Initialized the `line` array in TOPIXCompress() to prevent uninitialized variable warnings
+- Marked intentionally unused parameters with `(void)` to suppress compiler warnings
+- Updated Makefile with modern compilation flags: `-Wall -Wextra -O2`
+- Added `-D_DEFAULT_SOURCE` for POSIX compatibility on modern Debian systems
+- Separated compilation and linking flags in Makefile for better build control
+- Now compiles without warnings or errors on Debian with modern GCC
+
 ### 2010-07-10 - PPD Fixes
 
 PPDC compilation errors discovered in Ubuntu 10.10 and resolution setting
@@ -72,9 +89,9 @@ As of May 2010, thorough testing has only been performed on the B-SX4 model. Ple
 the drivers on other printers with success.
 
 
-## Instalation
+## Installation
 
-The CUPS image development headers are required before compilation. In Ubuntu, these can be installed with:
+The CUPS image development headers are required before compilation. In Ubuntu/Debian, these can be installed with:
 
     sudo apt-get install libcupsimage2-dev
 
@@ -95,5 +112,6 @@ and show them in the CUPS printer selection screens.
 
 rastertotpcl is based on the rastertotec driver written by Patick Kong (SKE s.a.r.l).
 rastertotec is based on the rastertolabel driver included with the CUPS printing system by Easy Software Products.
-Packaing of rastertotpcl and TOPIX compression was added by Sam Lown (www.samlown.com).
+Packaging of rastertotpcl and TOPIX compression was added by Sam Lown (www.samlown.com).
+Modern Debian compilation updates added by codyintegralis (2026).
 
