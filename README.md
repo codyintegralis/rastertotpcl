@@ -43,7 +43,7 @@ Updated the driver to compile cleanly on modern Debian systems, current GCC vers
 
 **Changes made:**
 
-#### CUPS 2.0+ Compatibility
+#### CUPS 2.0+ Compatibility (`src/rastertotpcl.c`)
 The `ppd_file_t` type was deprecated in CUPS 1.6 and removed entirely in CUPS 2.0. This fix ensures the driver works with both old and modern CUPS versions:
 
 - **Function Signatures:** All function prototypes changed to use `void *ppd` instead of `ppd_file_t *ppd`
@@ -51,7 +51,18 @@ The `ppd_file_t` type was deprecated in CUPS 1.6 and removed entirely in CUPS 2.
 - **Backward Compatibility:** Maintains compatibility with CUPS 1.6+ while working with CUPS 2.0+
 - **Updated Functions:** `Setup()`, `StartPage()`, `EndPage()`, `OutputLine()`, `TOPIXCompress()`, and `TOPIXCompressOutputBuffer()`
 
-#### Earlier Updates (from 2026-05-08)
+#### Makefile Improvements (`src/Makefile`)
+Updated with modern compilation flags and explicit build rules for better compatibility and transparency:
+
+- **Compilation Flags:** Changed from `CFLAGS=-lcupsimage` to `CFLAGS=-Wall -Wextra -O2 -D_DEFAULT_SOURCE`
+  - `-Wall -Wextra`: Enable comprehensive compiler warnings to catch potential issues
+  - `-O2`: Optimization level for better performance
+  - `-D_DEFAULT_SOURCE`: POSIX compatibility on modern Debian systems
+- **Separated Variables:** Split `CFLAGS` and `LIBS` for better build control
+- **Explicit Build Rule:** Added explicit `gcc` compilation rule showing exactly how the binary is built
+- **Improved Transparency:** Build process is now more visible and easier to troubleshoot
+
+#### Earlier Compilation Updates
 - Added missing standard library headers: `#include <stdio.h>` and `#include <string.h>`
 - Replaced all unsafe `strcpy()` and `strcat()` calls with `strncpy()` and `strncat()` for buffer overflow protection
 - Fixed compiler warnings for signed/unsigned type mismatches with explicit casts
@@ -59,9 +70,6 @@ The `ppd_file_t` type was deprecated in CUPS 1.6 and removed entirely in CUPS 2.
 - Fixed ceiling calculation with proper float division before casting to int
 - Initialized the `line` array in TOPIXCompress() to prevent uninitialized variable warnings
 - Marked intentionally unused parameters with `(void)` to suppress compiler warnings
-- Updated Makefile with modern compilation flags: `-Wall -Wextra -O2`
-- Added `-D_DEFAULT_SOURCE` for POSIX compatibility on modern Debian systems
-- Separated compilation and linking flags in Makefile for better build control
 - Now compiles without warnings or errors on Debian with modern GCC
 
 ### 2010-07-10 - PPD Fixes
