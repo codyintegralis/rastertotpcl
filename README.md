@@ -1,6 +1,9 @@
 
 # Toshiba TEC TPCL CUPS Raster Driver - rastertotpcl
 
+This is an attempt in 2026 to make the old drivers compatible with current Debian versions.
+I´m using Copilot to achieve this.
+
 ## Introduction
 
 A driver to Toshiba TEC Label printers supporting the TEC Printer Command Language or TPCL,
