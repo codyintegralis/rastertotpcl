@@ -1,6 +1,7 @@
 
 EXEC=rastertotpcl
-CFLAGS=-lcupsimage
+CFLAGS=-Wall -Wextra -O2 -D_DEFAULT_SOURCE
+LIBS=-lcupsimage
 PPDPATH=/usr/share/ppd
 EXECPATH=/usr/lib/cups/filter
 
@@ -9,6 +10,7 @@ all: rastertotpcl ppd
 .PHONY: ppd clean install uninstall
 
 $(EXEC): rastertotpcl.c
+	gcc $(CFLAGS) -o $(EXEC) rastertotpcl.c $(LIBS)
 
 ppd:
 	ppdc tectpcl2.drv
@@ -27,3 +29,4 @@ uninstall:
 clean:
 	rm -f rastertotpcl
 	rm -rf ppd
+
