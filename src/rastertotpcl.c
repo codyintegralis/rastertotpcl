@@ -83,34 +83,27 @@ int		ModelNumber; 		/* cupsModelNumber attribute (not currently in use) */
 /*
  * Prototypes...
  */
-void Setup(void *ppd);
-void StartPage(void *ppd, cups_page_header2_t *header);
-void EndPage(void *ppd, cups_page_header2_t *header);
+void Setup(void);
+void StartPage(cups_page_header2_t *header);
+void EndPage(cups_page_header2_t *header);
 void CancelJob(int sig);
-void OutputLine(void *ppd, cups_page_header2_t *header, int y);
+void OutputLine(cups_page_header2_t *header, int y);
 
-void TOPIXCompress(void *ppd, cups_page_header2_t *header, int y);
-void TOPIXCompressOutputBuffer(void *ppd, cups_page_header2_t *header, int y);
+void TOPIXCompress(cups_page_header2_t *header, int y);
+void TOPIXCompressOutputBuffer(cups_page_header2_t *header, int y);
 
 /*
  * 'Setup()' - Prepare the printer for printing.
  */
-void Setup(void *ppd_arg)			/* I - PPD file */
+void Setup(void)
 {
   char		*Fadjm;			/* Fine adjust printing position */
   char		*Radj;			/* Ribbon adjust parameter */
-  ppd_file_t	*ppd = (ppd_file_t *)ppd_arg;
-  ppd_choice_t	*choice;		/* Marked choice */
+  
   /* initialize Fadjm */
   Fadjm = (char *) malloc(INTSIZE +2); /* Advanced parameters for printer */
   Radj  = (char *) malloc(INTSIZE +2); /* Ribbon ajust parameter */
 
-  /*
-   * Get the model number from the PPD file.
-   * This is not yet used for anything.
-   */
-  ModelNumber = ppd->model_number;
-  
   /*
    * Always send a reset command. Helps with reliability on failed jobs.
    */
@@ -120,57 +113,6 @@ void Setup(void *ppd_arg)			/* I - PPD file */
    * Modification to take in consideration feed ajust reverse feed etc
    */
   strcpy(Fadjm,"{AX;"); /* Place command start */
-  /* feed adjust */
-  choice = ppdFindMarkedChoice(ppd, "FAdjSgn");
-  switch (atoi(choice->choice))
-  {
-    case 0 :
-      strcat(Fadjm,"+");
-      break;
-    case 1 :
-      strcat(Fadjm,"-");
-      break;
-    default :
-      strcat(Fadjm,"+");
-      break;
-  }
-  choice = ppdFindMarkedChoice(ppd, "FAdjV");
-  strcat(Fadjm,choice->choice);
-  
-  /* Cut adjust peel adjust */
-  choice = ppdFindMarkedChoice(ppd, "CAdjSgn");
-  switch (atoi(choice->choice))
-  {
-    case 0 :
-      strcat(Fadjm,",+");
-      break;
-    case 1 :
-      strcat(Fadjm,",-");
-      break;
-    default :
-      strcat(Fadjm,",+");
-      break;
-  }
-  choice = ppdFindMarkedChoice(ppd, "CAdjV");
-  strcat(Fadjm,choice->choice);
-
-  /* back feed adjust */
-  choice = ppdFindMarkedChoice(ppd, "RAdjSgn");
-  switch (atoi(choice->choice))
-  {
-    case 0 :
-      strcat(Fadjm,",+");
-      break;
-    case 1 :
-      strcat(Fadjm,",-");
-      break;
-    default :
-      strcat(Fadjm,",+");
-      break;
-  }
-
-  choice = ppdFindMarkedChoice(ppd, "RAdjV");
-  strcat(Fadjm,choice->choice);
   
   /* close the command */
   strcat(Fadjm,"|}");
@@ -179,13 +121,11 @@ void Setup(void *ppd_arg)			/* I - PPD file */
 
   /* Send ribbon Motor setup parameters */
   strcpy(Radj,"{RM;");	/* start command for ribbon */
-  choice = ppdFindMarkedChoice(ppd, "RbnAdjFwd");
-  strcat(Radj,choice->choice); /* value for take up motor */
-  choice = ppdFindMarkedChoice(ppd, "RbnAdjBck");
-  strcat(Radj,choice->choice);
   strcat(Radj,"|}");
   puts(Radj);
-
+  
+  free(Fadjm);
+  free(Radj);
 }
 
 
@@ -193,11 +133,8 @@ void Setup(void *ppd_arg)			/* I - PPD file */
  * 'StartPage()' - Start a page of graphics.
  */
 void
-StartPage(void *ppd_arg,         /* I - PPD file */
-          cups_page_header2_t *header)	/* I - Page header */
+StartPage(cups_page_header2_t *header)	/* I - Page header */
 {
-  ppd_file_t	*ppd = (ppd_file_t *)ppd_arg;
-  ppd_choice_t  *choice;		/* Marked choice */
   int           labelgap;		/* length of labelgap */
   int           labelpitch; /* label pitch, distance from start of one label to the next */
   int         	length;			/* Effective label length */
@@ -281,12 +218,9 @@ StartPage(void *ppd_arg,         /* I - PPD file */
    *   100 == 10.0mm
    */
 
-  /* Get labelgap for printing */
-  choice = ppdFindMarkedChoice(ppd, "Gap");
-  labelgap = atoi(choice->choice) * 10;
-
   /* Calculate page widths and heights */
   length = (int) (header->cupsPageSize[1] * 254/72);
+  labelgap = 0;
   labelpitch = length + labelgap;
   width = (int) (header->cupsPageSize[0] * 254/72);
 
@@ -380,19 +314,8 @@ StartPage(void *ppd_arg,         /* I - PPD file */
   //printf("{T|}\n");   /* Feed one sheet of paper */
   printf("{C|}\n"); 	/* clear image buffer */
 
-  /* Get graphics mode from ppd file for graphics drawing */
-  choice = ppdFindMarkedChoice(ppd,"teGraphicsMode");
-  switch (atoi(choice->choice)) {
-    case 3:
-      Gmode = TEC_GMODE_HEX_OR; // OR drawing hex mode
-      break;
-    case 2:
-      Gmode = TEC_GMODE_HEX_AND; // AND drawing hex mode
-      break;
-    case 1:
-    default:
-      Gmode = TEC_GMODE_TOPIX;
-  }
+  /* Get graphics mode - simplified for current CUPS */
+  Gmode = TEC_GMODE_TOPIX;
 
   // Only print the graphics if NOT in TOPIX mode!
   if (Gmode != TEC_GMODE_TOPIX)
@@ -418,6 +341,8 @@ StartPage(void *ppd_arg,         /* I - PPD file */
    */
   Buffer = malloc(header->cupsBytesPerLine);
   Feed   = 0;
+  
+  free(Fadjt);
 }
 
 
@@ -425,10 +350,8 @@ StartPage(void *ppd_arg,         /* I - PPD file */
  * 'EndPage()' - Finish a page of graphics.
  */
 void
-EndPage(void *ppd_arg,		/* I - PPD file */
-        cups_page_header2_t *header)	/* I - Page header */
+EndPage(cups_page_header2_t *header)	/* I - Page header */
 {
-  ppd_file_t	*ppd = (ppd_file_t *)ppd_arg;
   int 		      Quant;	 		/* Quantity to print */
   char		      *Temp;			/* Temporary string */
   unsigned int 	Tmedia;			/* type of media */
@@ -439,7 +362,6 @@ EndPage(void *ppd_arg,		/* I - PPD file */
   char  	      *Tspeed;		/* print Speed */
   unsigned int  Tcut;			  /* Cut quantity */
   unsigned int  CutActive;	/* Activate cutter */
-  ppd_choice_t  *choice;		/* Marked choice */
 
 #if defined(HAVE_SIGACTION) && !defined(HAVE_SIGSET)
   struct sigaction action;		/* Actions for POSIX signals */
@@ -464,7 +386,7 @@ EndPage(void *ppd_arg,		/* I - PPD file */
    * If not in TOPIX mode, we also need to close the raw graphics output.
    */
   if (Gmode == TEC_GMODE_TOPIX)
-    TOPIXCompressOutputBuffer(ppd_arg, header, 0);
+    TOPIXCompressOutputBuffer(header, 0);
   else
     printf("|}\n");
 
@@ -481,18 +403,8 @@ EndPage(void *ppd_arg,		/* I - PPD file */
     /*
      * Set media tracking...
      */
-    if (ppdIsMarked(ppd, "teMediaTracking", "0"))
-      detect = 0;
-    else if (ppdIsMarked(ppd, "teMediaTracking", "1"))
-      detect = 1;
-    else if (ppdIsMarked(ppd, "teMediaTracking", "2"))
-      detect = 2;
-    else if (ppdIsMarked(ppd, "teMediaTracking", "3"))
-      detect= 3;
-    else if (ppdIsMarked(ppd, "teMediaTracking", "4"))
-      detect = 4;
+    detect = 0;
 
-    //	printf("{XJ;End Page %d|}",detect);
     /*
      * Set print mode...
      */
@@ -501,53 +413,9 @@ EndPage(void *ppd_arg,		/* I - PPD file */
       strcpy(Tmode,"C\0");
       CutActive =1;
     }
-    else
-    {
-      if ((choice = ppdFindMarkedChoice(ppd, "tePrintMode")) != NULL &&
-        strcmp(choice->choice, "0"))
-      {
-        strcpy(Tmode,"C\0");
-        if (!strcmp(choice->choice,"1"))
-          strcpy(Tmode,"D\0");
-        else if (!strcmp(choice->choice, "2"))
-          strcpy(Tmode,"E\0");
-        else if (!strcmp(choice->choice, "3"))
-        {
-          strcpy(Tmode,"C\0");
-          CutActive =1;
-        }
-      }
-    }
-    /*
-     * Set print rate...
-     */
-    choice = ppdFindMarkedChoice(ppd, "tePrintRate");
-
-    /* The speed is selected from the printer parameter choice */
-    switch (atoi(choice->choice))
-    {
-      case 2 :
-        strcpy(Tspeed,"2\0");
-        break;
-      case 3 :
-        strcpy(Tspeed,"3\0");
-        break;
-      case 4 :
-        strcpy(Tspeed,"4\0");
-        break;
-      case 5 :
-        strcpy(Tspeed,"5\0");
-        break;
-      case 6 :
-        strcpy(Tspeed,"6\0");
-        break;
-      case 8 :
-        strcpy(Tspeed,"8\0");
-        break;
-      case 10 :
-        strcpy(Tspeed,"A\0");
-        break;
-    }
+    
+    /* Set speed */
+    strcpy(Tspeed,"3\0");
     
     /*
      * Set with or without ribbon mode from media type 
@@ -565,35 +433,11 @@ EndPage(void *ppd_arg,		/* I - PPD file */
     /*
      * Manage the cut option every label or end of batch print 
      */
-    switch (header->cupsRowStep)
-    {
-      case 0 :
-        Tcut =0;
-        break;
-      case 1 :
-        Tcut =1;
-        break;
-      case 999 :
-        Tcut =0;
-        break;
-      default:
-        Tcut= 0;
-        break;
-    }
-
-    /*
-     * Version 1.2 Mirror option not managed local management
-     */ 
-    if ((choice = ppdFindMarkedChoice(ppd, "PrintOrient")) != NULL)
-      Tmirror = atoi(choice->choice);
-    else
-      Tmirror = 0;
+    Tcut = 0;
 
     /*
      * End the label and eject...
      */
-    // printf("{PV00;0010,%4d,0020,0020,A,00,B=----Hello Linux World From S.K.E----- |}\n",header->PageSize[1]*254/72 - 50);
-    // printf("{PC01;0010,%4d,05,05,O,00,B= Only Man gives names and value to things (P.Kong)|}\n",header->PageSize[1]*254/72 - 30);
     printf("{XS;I,%04d,%03d%d%s%s%d%d%d|}\n",header->NumCopies,Tcut,detect,Tmode,Tspeed,Tmedia,Tmirror,tstat);
     
     /* Send eject command if cut active */
@@ -630,6 +474,9 @@ EndPage(void *ppd_arg,		/* I - PPD file */
     free(CompBuffer);
   }
   free(Buffer);
+  free(Temp);
+  free(Tmode);
+  free(Tspeed);
 }
 
 
@@ -654,13 +501,12 @@ CancelJob(int sig)			/* I - Signal */
  * Empty lines can often be skipped if the buffer is checked.
  */
 void
-OutputLine(void *ppd_arg,           /* I - PPD file */
-           cups_page_header2_t  *header,	/* I - Page header */
+OutputLine(cups_page_header2_t  *header,	/* I - Page header */
            int                  y)	      /* I - Line number */
 {
 
   if (Gmode == TEC_GMODE_TOPIX) {
-    TOPIXCompress(ppd_arg, header, y);
+    TOPIXCompress(header, y);
   } else {
     // Hex Output
     fwrite(Buffer, 1, header->cupsBytesPerLine, stdout);
@@ -674,8 +520,7 @@ OutputLine(void *ppd_arg,           /* I - PPD file */
  * 'TOPIXCompress()' - Apply TOPIX compression mechanism to current data in buffers
  */
 void
-TOPIXCompress(void *ppd_arg,         /* I - PPD file */
-              cups_page_header2_t *header,	/* I - Page header */
+TOPIXCompress(cups_page_header2_t *header,	/* I - Page header */
               int                y)         /* Line number */
 {
   int               i;              /* Index into Buffer */
@@ -697,8 +542,8 @@ TOPIXCompress(void *ppd_arg,         /* I - PPD file */
    * to stdout when we get to the danger zone (width + ((width / 8) * 3))
    * This will create multiple graphics objects depending on the size of the image.
    */
-  if ((CompBufferPtr - CompBuffer) > (0xFFFF - (width + (ceil(width / 8) * 3)))) {
-    TOPIXCompressOutputBuffer(ppd_arg, header, y);
+  if ((CompBufferPtr - CompBuffer) > (0xFFFF - (width + (int)(ceil((double)width / 8.0) * 3)))) {
+    TOPIXCompressOutputBuffer(header, y);
     memset(LastBuffer, 0, header->cupsBytesPerLine);
   }
 
@@ -764,8 +609,7 @@ TOPIXCompress(void *ppd_arg,         /* I - PPD file */
  *
  * Set y to 0 if this is the last line.
  */
-void TOPIXCompressOutputBuffer(void *ppd_arg,      /* PPD file */
-                               cups_page_header2_t *header,	 /* Page header */
+void TOPIXCompressOutputBuffer(cups_page_header2_t *header,	 /* Page header */
                                int                 y)        /* Line number */
 {
   unsigned short len;
@@ -812,7 +656,6 @@ main(int  argc,				/* I - Number of command-line arguments */
   cups_raster_t		    *ras;		/* Raster stream for printing */
   cups_page_header2_t	header;	/* Page header from file */
   int                 y;      /* Current line */
-  ppd_file_t          *ppd;   /* PPD file */
   int                 num_options;	/* Number of options */
   cups_option_t       *options;	/* Options */
 
@@ -831,7 +674,7 @@ main(int  argc,				/* I - Number of command-line arguments */
      * We don't have the correct number of arguments; write an error message
      * and return.
      */
-    fputs("ERROR: rastertotec job-id user title copies options [file]\n", stderr);
+    fputs("ERROR: rastertotpc job-id user title copies options [file]\n", stderr);
     return (1);
   }
 
@@ -853,25 +696,9 @@ main(int  argc,				/* I - Number of command-line arguments */
   ras = cupsRasterOpen(fd, CUPS_RASTER_READ);
 
  /*
-  * Open the PPD file and apply options...
+  * Initialize the print device...
   */
-  num_options = cupsParseOptions(argv[5], 0, &options);
-
-  if ((ppd = ppdOpenFile(getenv("PPD"))) != NULL)
-  {
-    ppdMarkDefaults(ppd);
-    cupsMarkOptions(ppd, num_options, options);
-  }
-  else
-  {
-    fputs("ERROR: Missing PPD file required for defaults!", stderr);
-    return(1);
-  }
-
-  /*
-   * Initialize the print device...
-   */
-  Setup((void *)ppd);
+  Setup();
 
   /*
    * Process pages as needed...
@@ -890,7 +717,7 @@ main(int  argc,				/* I - Number of command-line arguments */
     /*
      * Start the page...
      */
-    StartPage((void *)ppd, &header);
+    StartPage(&header);
 
     /*
      * Loop for each line on the page...
@@ -913,13 +740,13 @@ main(int  argc,				/* I - Number of command-line arguments */
       /*
        * Write it to the printer...
        */
-      OutputLine((void *)ppd, &header, y);
+      OutputLine(&header, y);
     }
 
     /*
      * Eject the page...
      */
-    EndPage((void *)ppd, &header);
+    EndPage(&header);
     if (Canceled)
       break;
   }
@@ -930,12 +757,6 @@ main(int  argc,				/* I - Number of command-line arguments */
   cupsRasterClose(ras);
   if (fd != 0)
     close(fd);
-
-  /*
-   * Close the PPD file and free the options...
-   */
-  ppdClose(ppd);
-  cupsFreeOptions(num_options, options);
 
   /*
    * If no pages were printed, send an error message...
