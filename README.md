@@ -133,8 +133,6 @@ This will install the filter binary to `/usr/lib/cups/filter/rastertotpcl`
 
 ## TODO
 
-* Add support for RFID
-* Optionally restore PPD-based configuration in future versions if needed
 
 ## Authors
 
