@@ -50,6 +50,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <math.h>
+#include <stdio.h>
 
 
 /*
