@@ -1,6 +1,8 @@
 
 # Toshiba TEC TPCL CUPS Raster Driver - rastertotpcl
 
+!Work in progress!
+
 ## Introduction
 
 A driver to Toshiba TEC Label printers supporting the TEC Printer Command Language or TPCL, version 2.
